@@ -1,0 +1,439 @@
+---
+title: "Hotel Cancellation Study"
+author: "Leo Shi"
+date: "2024-05-14"
+output: html_document
+---
+
+
+
+
+```{r}
+#packages
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(gridExtra)
+library(MASS)
+library(dplyr)
+library(car)
+library(pROC)
+library(arm)
+library(ggcorrplot)
+library(ggfortify)
+```
+
+
+```{r}
+#Display the initial dataset
+Hotel_bookings <- read_csv("Hotel_bookings.csv")
+head(Hotel_bookings)
+```
+
+
+
+
+```{r}
+#EDA exploration for categorical
+#Matching rooms
+Hotel_bookings$matched <- ifelse(Hotel_bookings$reserved_room_type == Hotel_bookings$assigned_room_type, "1", "0")
+head(as.character(Hotel_bookings$matched))
+matched_room <- table(Hotel_bookings$matched)
+matched_room_df <- as.data.frame(matched_room)
+colnames(matched_room_df) <- c('Matched room', 'Total Number')
+matched_room_df
+# Create the pie chart for market segment
+matched_room_chart<- ggplot(data=matched_room_df, aes(x=`Matched room`, y=`Total Number`, fill=`Matched room`))+
+  geom_bar(stat="identity")+
+    labs(title = "Rooms matched", fill = "No is 0, True is 1")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=0.9), vjust=-0.25)
+matched_room_chart
+
+```
+
+
+```{r}
+hotel_types <- table(Hotel_bookings$hotel)
+hotel_types_df <- as.data.frame(hotel_types)
+colnames(hotel_types_df) <- c('Type of Hotel', 'Total Number')
+hotel_types_df
+# Create the pie chart for market segment
+hotel_types_chart<- ggplot(data=hotel_types_df, aes(x=`Type of Hotel`, y=`Total Number`, fill=`Type of Hotel`))+
+  geom_bar(stat="identity")+
+    labs(title = "Type of Hotel")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=0.9), vjust=-0.25)
+hotel_types_chart
+```
+
+
+```{r}
+hotel_market <- table(Hotel_bookings$market_segment)
+hotel_market_df <- as.data.frame(hotel_market)
+colnames(hotel_market_df) <- c('Type of Marketing', 'Total Number')
+hotel_market_df
+# Create the Bar chart for market segment
+
+hotel_market_chart <- ggplot(data=hotel_market_df, aes(x=`Type of Marketing`, y=`Total Number`, fill=`Type of Marketing`))+
+  geom_bar(stat="identity")+
+    labs(title = "Type of Market", fill = "Market Selection")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=1.2), vjust=0)
+hotel_market_chart
+
+```
+
+
+```{r}
+#Distribution channel
+hotel_channel <- table(Hotel_bookings$distribution_channel)
+hotel_channel_df <- as.data.frame(hotel_channel)
+colnames(hotel_channel_df) <- c('Type of Channel', 'Total Number')
+hotel_channel_df
+
+# Create the pie chart for channel segment
+hotel_channel_chart <- ggplot(data=hotel_channel_df, aes(x=`Type of Channel`, y=`Total Number`, fill=`Type of Channel`))+
+  geom_bar(stat="identity")+
+    labs(title = "Type of Channel", fill = "Channel Distribution")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=0.9), vjust=-0.25)
+hotel_channel_chart
+```
+
+
+```{r}
+#type of meals
+Meals <- table(Hotel_bookings$meal)
+Meals_df <- as.data.frame(Meals)
+colnames(Meals_df) <- c('Type of Meal Service', 'Total Number')
+Meals_df
+# Create the pie chart for Meals
+
+Meals_chart <-ggplot(data=Meals_df, aes(x=`Type of Meal Service`, y=`Total Number`, fill=`Type of Meal Service`))+
+  geom_bar(stat="identity")+
+    labs(title = "Meal Services requested", fill = "Meal Selection")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=0.9), vjust=-0.25)
+Meals_chart
+
+```
+
+
+```{r}
+#was a repeated guest
+repeated_guest <- table(Hotel_bookings$is_repeated_guest)
+repeated_guest_df <- as.data.frame(repeated_guest)
+colnames(repeated_guest_df) <- c('Was a repeated guest', 'Total Number')
+repeated_guest_df
+# Create the pie chart for market segment
+
+repeated_guest_chart <- ggplot(data=repeated_guest_df, aes(x=`Was a repeated guest`, y=`Total Number`, fill=`Was a repeated guest`))+
+  geom_bar(stat="identity")+
+    labs(title = "Were they previous repeated guests", fill = "Previous repeated guest (0 is no 1 is yes)")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=0.9), vjust=-0.25)
+repeated_guest_chart
+```
+
+
+```{r}
+#reserved_room type
+reserved_room_type <- table(Hotel_bookings$reserved_room_type)
+reserved_room_type_df <- as.data.frame(reserved_room_type)
+colnames(reserved_room_type_df) <- c('Previous reserved room types', 'Total Number')
+reserved_room_type_df
+# Create the pie chart for market segment
+
+reserved_room_chart <-ggplot(data=reserved_room_type_df, aes(x=`Previous reserved room types`, y=`Total Number`, fill=`Previous reserved room types`))+
+  geom_bar(stat="identity")+
+    labs(title = "Type of room that the guests previously reserved", fill = "Type of room")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=0.9), vjust=-0.25)
+reserved_room_chart
+```
+
+
+```{r}
+#actual_room type
+actual_room <- table(Hotel_bookings$assigned_room_type)
+actual_room_df <- as.data.frame(actual_room)
+colnames(actual_room_df) <- c('Actual room types', 'Total Number')
+actual_room_df
+
+actual_room_chart <- ggplot(data=actual_room_df, aes(x=`Actual room types`, y=`Total Number`, fill=`Actual room types`))+
+  geom_bar(stat="identity")+
+    labs(title = "Type of room that the guests actually received", fill = "Type of room")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=0.9), vjust=-0.25)
+actual_room_chart
+```
+
+
+
+```{r}
+#deposit types
+deposit <- table(Hotel_bookings$deposit_type)
+deposit_df <- as.data.frame(deposit)
+colnames(deposit_df) <- c('Type of Deposit', 'Total Number')
+deposit_df
+# Create the pie chart for market segment
+deposit_chart<- ggplot(data=deposit_df, aes(x=`Type of Deposit`, y=`Total Number`, fill=`Type of Deposit`))+
+  geom_bar(stat="identity")+
+    labs(title = "The deposit after they reserve the room", fill = "Type of deposit")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=0.9), vjust=-0.25)
+deposit_chart
+```
+
+
+
+```{r}
+#Customer types
+customer <- table(Hotel_bookings$customer_type)
+customer_df <- as.data.frame(customer)
+colnames(customer_df) <- c('Customer Types', 'Total Number')
+customer_df
+
+
+customer_chart<- ggplot(data=customer_df, aes(x=`Customer Types`, y=`Total Number`, fill=`Customer Types`))+
+  geom_bar(stat="identity")+
+    labs(title = "Customer types", fill = "Type of customers")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=0.9), vjust=-0.25)
+customer_chart
+```
+
+
+```{r}
+#Create the country distribution
+country <- table(Hotel_bookings$country)
+country_df <- as.data.frame(country)
+head(country_df)
+```
+
+
+```{r}
+#Matched room
+being_cancelled <- table(Hotel_bookings$is_canceled)
+being_cancelled_df <- as.data.frame(being_cancelled)
+colnames(being_cancelled_df) <- c('Is cancelled', 'Total Number')
+being_cancelled_df
+head(as.character(Hotel_bookings$is_canceled))
+# Create the pie chart for market segment
+being_cancelled_chart<- ggplot(data=being_cancelled_df, aes(x=`Is cancelled`, y=`Total Number`, fill=`Is cancelled`))+
+  geom_bar(stat="identity")+
+    labs(title = "Rooms are are being cancelled", fill = "0 is No, 1 is Yes")+
+  geom_text(aes(label=`Total Number`), position=position_dodge(width=0.9), vjust=-0.25)
+being_cancelled_chart
+#1 is being cancelled, 0 is not cancelled
+```
+
+```{r}
+#EDA for numerical portion
+#lead_time distribution
+ggplot(Hotel_bookings, aes(x = lead_time)) +
+  geom_histogram(binwidth = 20, fill = "yellow", color = "Blue") +
+  labs(
+    title = "Days between guests from making reservation to check in",
+    x = "Numbers of days between reservation and check in",
+    y= "Frequency"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+#number of nights stayed
+Hotel_bookings$stays <- Hotel_bookings$stays_in_weekend_nights+Hotel_bookings$stays_in_week_nights
+head(as.numeric(Hotel_bookings$stays))
+ggplot(Hotel_bookings, aes(x = stays)) +
+  geom_histogram(binwidth = 1, fill = "yellow", color = "Blue") +
+  labs(
+    title = "Number of days guests has stay in the room",
+    x = "Number of nights",
+    y = "Freuency"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+#number of total person
+
+Hotel_bookings$people <- Hotel_bookings$adults+Hotel_bookings$children+Hotel_bookings$babies
+head(as.numeric(Hotel_bookings$people))
+ggplot(Hotel_bookings, aes(x = people)) +
+  geom_histogram(binwidth = 1, fill = "yellow", color = "Blue") +
+  labs(
+    title = "Number of guests for each room",
+    x = "Number of people",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+#booking changes
+ggplot(Hotel_bookings, aes(x = booking_changes)) +
+  geom_histogram(binwidth = 1, fill = "yellow", color = "Blue") +
+  labs(
+    title = "Number of bookings changes prior to the actual check-in",
+    x = "Number of booking changes",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+#adr
+ggplot(Hotel_bookings, aes(x = adr)) +
+  geom_histogram(binwidth = 100, fill = "yellow", color = "Blue") +
+  labs(
+    title = "Average daily rate",
+    x = "Daily rates ",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+```{r}
+#previous cancellations
+ggplot(Hotel_bookings, aes(x = previous_cancellations)) +
+  geom_histogram(binwidth = 0.5, fill = "yellow", color = "Blue") +
+  labs(
+    title = "Previous cancellations",
+    x = "The number of cancellations",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+```{r}
+#previous not canceled room
+ggplot(Hotel_bookings, aes(x = previous_bookings_not_canceled)) +
+  geom_histogram(binwidth = 1, fill = "yellow", color = "Blue") +
+  labs(
+    title = "Previous not canceled rooms",
+    x = "The rooms that are not being canceled",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+```
+```{r}
+#Waiting list
+ggplot(Hotel_bookings, aes(x = days_in_waiting_list)) +
+  geom_histogram(binwidth = 20, fill = "yellow", color = "Blue") +
+  labs(
+    title = "Days in the waiting list prior to actual reserved",
+    x = "The number of days in the waitlist",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+#require spaces
+ggplot(Hotel_bookings, aes(x = required_car_parking_spaces)) +
+  geom_histogram(binwidth = 0.5, fill = "yellow", color = "Blue") +
+  labs(
+    title = "Required car parking spaces for hotel",
+    x = "The number of parking spaces required",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+```
+```{r}
+#special requests
+ggplot(Hotel_bookings, aes(x = total_of_special_requests)) +
+  geom_histogram(binwidth = 0.5, fill = "yellow", color = "Blue") +
+  labs(
+    title = "The special request requested",
+    x = "The number of special request requested",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r}
+#delete unnecessary columns
+Hotel_bookings2 <- subset(Hotel_bookings, select = -c(arrival_date_year,arrival_date_month, arrival_date_week_number, arrival_date_day_of_month, agent, company, reservation_status_date, adults, children, babies, stays_in_weekend_nights, stays_in_week_nights, country, hotel, reservation_status, reserved_room_type, assigned_room_type))
+head(Hotel_bookings2)
+
+```
+
+```{r}
+#correlation matrix:
+
+matrix<- model.matrix(~0+., data=Hotel_bookings2) %>% 
+  cor(use="pairwise.complete.obs") %>% 
+  ggcorrplot(show.diag=TRUE, type="lower", lab=FALSE, lab_size=1, tl.cex=6, tl.srt=40)
+
+matrix
+```
+
+```{r}
+#Build out regression models: Full models  
+full_model <- glm(is_canceled ~., data=Hotel_bookings2，family=binomial)
+summary(full_model)
+
+```
+```{r}
+anova(full_model)
+vif(full_model)
+```
+
+
+
+```{r}
+#reduced model, after displayed the full model, key factors exposed to hotel cancellation
+
+reduced_model <- glm(is_canceled ~ lead_time + meal + 
+    is_repeated_guest + previous_cancellations + previous_bookings_not_canceled + 
+    booking_changes + customer_type + 
+    adr + total_of_special_requests + 
+    stays + people + matched, data=Hotel_bookings2, family=binomial)
+summary(reduced_model)
+```
+
+```{r}
+anova(reduced_model)
+
+```
+
+```{r}
+#Determine which one
+anova(full_model, reduced_model)
+```
+
+
+```{r}
+#assumptions for the selection ones
+autoplot(reduced_model)
+#VIF for selected model
+vif(reduced_model)
+
+durbinWatsonTest(reduced_model)
+```
+
+```{r}
+set.seed(1)
+sample <- sample(c(TRUE, FALSE), nrow(Hotel_bookings2), replace=TRUE, prob=c(0.7,0.3))
+train <- Hotel_bookings2[sample, ]
+test <- Hotel_bookings2[!sample, ]
+
+#AUC
+prediction <- predict(reduced_model, test, type="response")
+roc_object <- roc(test$is_canceled, prediction)
+auc(roc_object)
+```
+
+```{r}
+binnedplot(fitted(reduced_model),
+           residuals(reduced_model, type="response"),
+           nclass=NULL,
+           xlab="Expected Values",
+           ylab="Average residual",
+           main="Binned residual plot",
+           cex.pts=0.8,
+           col.pts=1,
+           col.int="gray")
+plot(reduced_model, which = 4, id.n = 3)
+anov <- aov(reduced_model)
+anov
+```
